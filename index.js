@@ -1,21 +1,25 @@
-const http = require('node:http');
+// Створити папку "baseFolder".
+// В ній створити 5 папок
+// в кожній з яких створити по 5 файлів з розширенням txt.
+// Вивести в консоль шляхи до кожного файлу чи папки, також вивести поряд інформацію про те, чи є це файл чи папка.
 
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-        data: 'Hello World!',
-    }));
-});
+const path = require('node:path');
+const fs = require('node:fs/promises');
 
-// // Create a local server to receive data from
-// const server = http.createServer();
-//
-// // Listen to the request event
-// server.on('request', (request, res) => {
-//     res.writeHead(200, { 'Content-Type': 'application/json' });
-//     res.end(JSON.stringify({
-//         data: 'test node server!',
-//     }));
-// });
+const creator = async () => {
+    const basePath = path.join(__dirname, 'baseFolder');
+    await fs.mkdir(basePath, { recursive: true });
 
-server.listen(8000);
+    for (let folderCounter = 1; folderCounter <= 5; folderCounter++) {
+        const folderPath = path.join(basePath, `folder-${folderCounter.toString()}`);
+        await fs.mkdir(folderPath, {recursive: true});
+
+        for (let fileCount = 1; fileCount <= 5; fileCount++) {
+            const data = `some data!\nfolder-${folderCounter.toString()}\nfile-${fileCount.toString()}`;
+            const pathToFile = path.join(folderPath, `file-${fileCount.toString()}.txt`);
+            await fs.writeFile(pathToFile, data, {encoding: 'utf8'});
+        }
+    }
+}
+
+void creator();
