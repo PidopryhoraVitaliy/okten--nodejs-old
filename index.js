@@ -1,3 +1,10 @@
+// Закінчити з CRUD операціями.
+//     При створенні робити валідацію на імʼя і вік,
+//     імʼя повинно бути більше за 3 символи, вік – не менше нуля
+// На гет, пут, деліт юзерів перевірити чи такий юзер є в базі.
+//     якщо немає – вивести помилку
+// Використовуйте шляхи для нових ендпоінтів згідно REST правил
+
 const express = require("express");
 
 const app = express();
@@ -29,9 +36,24 @@ app.get('/users', (req, res) => {
 app.post('/users', (req, res) => {
     try {
         const {name, email, password} = req.body;
+        const age = +req.body.age || 0;
+
         //TODO validate data
+        if (name.length <= 3) {
+            return res.status(422).send({
+                "message": "Validation failed",
+                "error": "the name is too short"
+            })
+        }
+        if (age <= 0) {
+            return res.status(422).send({
+                "message": "Validation failed",
+                "error": "incorrect age"
+            })
+        }
+
         const id = users[users.length - 1].id + 1;
-        const newUser = {id, name, email, password};
+        const newUser = {id, name, email, password, age};
         users.push(newUser);
         res.status(201).send(newUser);
     } catch (e) {
@@ -60,11 +82,23 @@ app.put('/users/:userId', (req, res) => {
             return res.status(404).send('User not found');
         }
         const {name, email, password} = req.body;
+        const age = +req.body.age || 0;
+
         //TODO validate data
-        // users[userIndex] = {...users[userIndex], name, email, password};
-        users[userIndex].name = name;
-        users[userIndex].email = email;
-        users[userIndex].password = password;
+        if (name.length <= 3) {
+            return res.status(422).send({
+                "message": "Validation failed",
+                "error": "the name is too short"
+            })
+        }
+        if (age <= 0) {
+            return res.status(422).send({
+                "message": "Validation failed",
+                "error": "incorrect age"
+            })
+        }
+
+        users[userIndex] = {...users[userIndex], name, email, password, age};
         res.status(201).send(users[userIndex]);
     } catch (e) {
         res.status(500).send(e.message);
