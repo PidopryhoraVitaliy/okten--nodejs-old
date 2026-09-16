@@ -17,7 +17,6 @@ app.use(express.urlencoded({extended: true}));
 const dbPath = path.join(__dirname, 'users.json');
 
 const getUsers = async () => {
-    console.log(dbPath);
     try {
         const dbData = await fs.readFile(dbPath, 'utf8');
         return dbData ? JSON.parse(dbData) : [];
@@ -34,7 +33,7 @@ const setUsers = async (users) => {
     }
 }
 
-const validateUser = ({name, age, email, password}) => {
+const validateUser = ({name='', age=0, email='', password=''}) => {
     const errors = [];
 
     if (name.length <= 3) {
