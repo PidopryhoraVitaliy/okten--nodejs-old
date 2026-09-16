@@ -25,6 +25,20 @@ const users = [
     {id: 10, name: 'Irina', email: 'irka7@gmail.com', password: 'kkk222'},
 ];
 
+const validateUser = ({name, age}) => {
+    const errors = [];
+
+    if (name.length <= 3) {
+        errors.push('the name is too short');
+    }
+    if (age <= 0) {
+        errors.push('incorrect age');
+    }
+    return errors;
+}
+
+const availableFieldNames = ['name', 'email', 'password', 'age'];
+
 app.get('/users', (req, res) => {
     try {
         res.send(users);
@@ -38,17 +52,12 @@ app.post('/users', (req, res) => {
         const {name, email, password} = req.body;
         const age = +req.body.age || 0;
 
-        //TODO validate data
-        if (name.length <= 3) {
+        // validate data
+        const errors = validateUser({name, age});
+        if (errors.length) {
             return res.status(422).send({
-                "message": "Validation failed",
-                "error": "the name is too short"
-            })
-        }
-        if (age <= 0) {
-            return res.status(422).send({
-                "message": "Validation failed",
-                "error": "incorrect age"
+                'message': 'Validation failed',
+                'error': errors.join('; ')
             })
         }
 
@@ -84,22 +93,54 @@ app.put('/users/:userId', (req, res) => {
         const {name, email, password} = req.body;
         const age = +req.body.age || 0;
 
-        //TODO validate data
-        if (name.length <= 3) {
+        // validate data
+        const errors = validateUser({name, age});
+        if (errors.length) {
             return res.status(422).send({
-                "message": "Validation failed",
-                "error": "the name is too short"
-            })
-        }
-        if (age <= 0) {
-            return res.status(422).send({
-                "message": "Validation failed",
-                "error": "incorrect age"
+                'message': 'Validation failed',
+                'error': errors.join('; ')
             })
         }
 
         users[userIndex] = {...users[userIndex], name, email, password, age};
         res.status(201).send(users[userIndex]);
+    } catch (e) {
+        res.status(500).send(e.message);
+    }
+});
+
+app.patch('/users/:userId', (req, res) => {
+    // console.log(req.body);
+    try {
+        const userId = Number(req.params.userId);
+        const userIndex = users.findIndex(user => user.id === userId);
+        if (userIndex === -1) {
+            return res.status(404).send('User not found');
+        }
+
+        const newUserData = {...users[userIndex]};
+        for (const key of Object.keys(req.body)) {
+            if (!availableFieldNames.includes(key)) {
+                continue;
+            }
+            if (key === 'age') {
+                newUserData[key] = +req.body.age || 0;
+            } else {
+                newUserData[key] = req.body[key];
+            }
+        }
+
+        // validate data
+        const errors = validateUser(newUserData);
+        if (errors.length) {
+            return res.status(422).send({
+                'message': 'Validation failed',
+                'error': errors.join('; ')
+            })
+        }
+
+        users[userIndex] = {...newUserData};
+        res.status(200).send(users[userIndex]);
     } catch (e) {
         res.status(500).send(e.message);
     }
