@@ -6,26 +6,35 @@
 // Використовуйте шляхи для нових ендпоінтів згідно REST правил
 
 const express = require("express");
+const path = require('node:path');
+const fs = require('node:fs/promises');
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
-const users = [
-    {id: 1, name: 'Maksym', email: 'feden@gmail.com', password: 'qwe123'},
-    {id: 2, name: 'Alina', email: 'alindosik@gmail.com', password: 'ert345'},
-    {id: 3, name: 'Anna', email: 'ann43@gmail.com', password: 'ghj393'},
-    {id: 4, name: 'Tamara', email: 'tomochka23@gmail.com', password: 'afs787'},
-    {id: 5, name: 'Dima', email: 'taper@gmail.com', password: 'rtt443'},
-    {id: 6, name: 'Rita', email: 'torpeda@gmail.com', password: 'vcx344'},
-    {id: 7, name: 'Denis', email: 'denchik@gmail.com', password: 'sdf555'},
-    {id: 8, name: 'Sergey', email: 'BigBoss@gmail.com', password: 'ccc322'},
-    {id: 9, name: 'Angela', email: 'lala@gmail.com', password: 'cdd343'},
-    {id: 10, name: 'Irina', email: 'irka7@gmail.com', password: 'kkk222'},
-];
+const dbPath = path.join(__dirname, 'users.json');
 
-const validateUser = ({name, age}) => {
+const getUsers = async () => {
+    console.log(dbPath);
+    try {
+        const dbData = await fs.readFile(dbPath, 'utf8');
+        return dbData ? JSON.parse(dbData) : [];
+    } catch (e) {
+        console.log('DB error! trying to get users');
+    }
+}
+
+const setUsers = async (users) => {
+    try {
+        await fs.writeFile(dbPath, JSON.stringify(users), 'utf8');
+    } catch (e) {
+        console.log('DB error! trying to set users');
+    }
+}
+
+const validateUser = ({name, age, email, password}) => {
     const errors = [];
 
     if (name.length <= 3) {
@@ -34,12 +43,23 @@ const validateUser = ({name, age}) => {
     if (age <= 0) {
         errors.push('incorrect age');
     }
+    if (email <= 0) {
+        errors.push('incorrect age');
+    }
+    if (typeof email !== "string" || email.trim().length <= 3 || !email.includes('@')) {
+        errors.push("incorrect email");
+    }
+    if (typeof password !== "string" || password.trim().length <= 4) {
+        errors.push("incorrect password");
+    }
+
     return errors;
 }
 
 const availableFieldNames = ['name', 'email', 'password', 'age'];
 
-app.get('/users', (req, res) => {
+app.get('/users', async (req, res) => {
+    const users = await getUsers();
     try {
         res.send(users);
     } catch (e) {
@@ -47,13 +67,13 @@ app.get('/users', (req, res) => {
     }
 });
 
-app.post('/users', (req, res) => {
+app.post('/users', async (req, res) => {
     try {
         const {name, email, password} = req.body;
         const age = +req.body.age || 0;
 
         // validate data
-        const errors = validateUser({name, age});
+        const errors = validateUser({name, age, email, password});
         if (errors.length) {
             return res.status(422).send({
                 'message': 'Validation failed',
@@ -61,18 +81,28 @@ app.post('/users', (req, res) => {
             })
         }
 
+        const users = await getUsers();
+
         const id = users[users.length - 1].id + 1;
         const newUser = {id, name, email, password, age};
         users.push(newUser);
+
+        await setUsers(users);
+
         res.status(201).send(newUser);
     } catch (e) {
         res.status(500).send(e.message);
     }
 });
 
-app.get('/users/:userId', (req, res) => {
+app.get('/users/:userId', async (req, res) => {
     try {
         const userId = Number(req.params.userId);
+        if (Number.isNaN(userId)) {
+            return res.status(400).send('Invalid user ID');
+        }
+
+        const users = await getUsers();
         const user = users.find(user => user.id === userId);
         if (!user) {
             return res.status(404).send('User not found');
@@ -83,9 +113,14 @@ app.get('/users/:userId', (req, res) => {
     }
 });
 
-app.put('/users/:userId', (req, res) => {
+app.put('/users/:userId', async (req, res) => {
     try {
         const userId = Number(req.params.userId);
+        if (Number.isNaN(userId)) {
+            return res.status(400).send('Invalid user ID');
+        }
+
+        const users = await getUsers();
         const userIndex = users.findIndex(user => user.id === userId);
         if (userIndex === -1) {
             return res.status(404).send('User not found');
@@ -94,7 +129,7 @@ app.put('/users/:userId', (req, res) => {
         const age = +req.body.age || 0;
 
         // validate data
-        const errors = validateUser({name, age});
+        const errors = validateUser({name, age, email, password});
         if (errors.length) {
             return res.status(422).send({
                 'message': 'Validation failed',
@@ -103,16 +138,24 @@ app.put('/users/:userId', (req, res) => {
         }
 
         users[userIndex] = {...users[userIndex], name, email, password, age};
+
+        await setUsers(users);
+
         res.status(201).send(users[userIndex]);
     } catch (e) {
         res.status(500).send(e.message);
     }
 });
 
-app.patch('/users/:userId', (req, res) => {
+app.patch('/users/:userId', async (req, res) => {
     // console.log(req.body);
     try {
         const userId = Number(req.params.userId);
+        if (Number.isNaN(userId)) {
+            return res.status(400).send('Invalid user ID');
+        }
+
+        const users = await getUsers();
         const userIndex = users.findIndex(user => user.id === userId);
         if (userIndex === -1) {
             return res.status(404).send('User not found');
@@ -140,20 +183,31 @@ app.patch('/users/:userId', (req, res) => {
         }
 
         users[userIndex] = {...newUserData};
+
+        await setUsers(users);
+
         res.status(200).send(users[userIndex]);
     } catch (e) {
         res.status(500).send(e.message);
     }
 });
 
-app.delete('/users/:userId', (req, res) => {
+app.delete('/users/:userId', async (req, res) => {
     try {
         const userId = Number(req.params.userId);
+        if (Number.isNaN(userId)) {
+            return res.status(400).send('Invalid user ID');
+        }
+
+        const users = await getUsers();
         const userIndex = users.findIndex(user => user.id === userId);
         if (userIndex === -1) {
             return res.status(404).send('User not found');
         }
         users.splice(userIndex, 1);
+
+        await setUsers(users);
+
         res.sendStatus(204);
     } catch (e) {
         res.status(500).send(e.message);
