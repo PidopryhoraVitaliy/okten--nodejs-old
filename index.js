@@ -43,9 +43,6 @@ const validateUser = ({name, age, email, password}) => {
     if (age <= 0) {
         errors.push('incorrect age');
     }
-    if (email <= 0) {
-        errors.push('incorrect age');
-    }
     if (typeof email !== "string" || email.trim().length <= 3 || !email.includes('@')) {
         errors.push("incorrect email");
     }
